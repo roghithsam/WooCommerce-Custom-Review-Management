@@ -224,3 +224,37 @@ function custom_review_page_html() {
 </script>
 <?php
 }
+
+function enqueue_admin_scripts_and_styles() {
+    // Ensure jQuery and jQuery UI are loaded
+    wp_enqueue_script('jquery');
+    wp_enqueue_script('jquery-ui-autocomplete');
+
+    // Load jQuery UI CSS from a CDN for the sake of example (Consider hosting your own in production)
+    wp_enqueue_style('jquery-ui-style', 'https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css');
+}
+add_action('admin_enqueue_scripts', 'enqueue_admin_scripts_and_styles');
+
+
+function woocommerce_ajax_product_search() {
+    if (isset($_GET['term'])) {
+        // Optional security check, make sure you pass 'security' parameter in AJAX call
+        check_ajax_referer('search_products_nonce', 'security');
+
+        $term = wc_clean(wp_unslash($_GET['term']));
+        $data_store = WC_Data_Store::load('product');
+        $ids = $data_store->search_products($term, '', false);
+
+        $results = array();
+        foreach ($ids as $id) {
+            $product = wc_get_product($id);
+            if (is_object($product)) {
+                $results[] = array('id' => $id, 'label' => $product->get_name());
+            }
+        }
+
+        wp_send_json($results);
+    }
+    wp_die();
+}
+add_action('wp_ajax_woocommerce_product_autocomplete', 'woocommerce_ajax_product_search');
